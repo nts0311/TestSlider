@@ -36,7 +36,7 @@ class RankingLevelTextLayer: CALayer {
         let textSize = text.sizeForFont(self.font)
         
         var textWidth = (textSize.width.rounded(.up) > textMaxWidth) ? textMaxWidth : textSize.width.rounded(.up)
-        var textHeight = (textSize.width.rounded(.up) > textMaxWidth) ? textMaxHeight : textSize.height.rounded(.up)
+        var textHeight = (textSize.width.rounded(.up) > textMaxWidth) ? textMaxHeight : textSize.height.rounded(.up) + 4.0
         
         let textX = center.x - textWidth / 2.0
         let textY = 36.0 / 2 - textHeight / 2.0

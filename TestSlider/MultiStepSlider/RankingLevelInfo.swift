@@ -24,6 +24,26 @@ extension RankingLevelInfo {
     }
 }
 
+struct RankingLevelViewData {
+    let levelInfos: [RankingLevelInfo]
+    let progress: Double
+}
+
+extension RankingLevelViewData {
+    
+    var currentRankIndex: Int {
+        Int(progress / (1.0 / Double(levelInfos.count - 1)))
+    }
+    
+    var progressColor: UIColor {
+        if currentRankIndex < 0 {
+            return .white
+        }
+        
+        return levelInfos[currentRankIndex].tintColor
+    }
+}
+
 extension UIColor {
     convenience init(hexString: String, alpha: CGFloat = 1) {
         var cString: String = hexString.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()

@@ -26,7 +26,7 @@ class RankingLevelView: UIControl {
         fontNodeLayerHeight / 2.0 + 10.0
     }
     
-    override var frame: CGRect {
+    var data: RankingLevelViewData = RankingLevelViewData(levelInfos: [], progress: 0) {
         didSet {
             updateLayerFrames()
         }
@@ -49,97 +49,84 @@ class RankingLevelView: UIControl {
     }
     
     func updateLayerFrames() {
+        updateFrameBackNodeLayer()
+        updateFrameFrontNodeLayer()
+        updateFrameTrackLayer()
+        highlightNode()
+        updateFrameOfTopTextLayer()
+        updateFrameOfBottomTextLayer()
+    }
+    
+    private func updateFrameBackNodeLayer() {
         backNodeLayer.frame = CGRect(x: 0, y: (self.bounds.height / 2.0) - (outterNodeLayerHeight / 2.0), width: self.bounds.width, height: outterNodeLayerHeight)
-        backNodeLayer.nodes = [
-            LevelNode(color: .white, size: outterNodeLayerHeight),
-            LevelNode(color: .white, size: outterNodeLayerHeight),
-            LevelNode(color: .white, size: outterNodeLayerHeight),
-            LevelNode(color: .white, size: outterNodeLayerHeight),
-            LevelNode(color: .white, size: outterNodeLayerHeight),
-            LevelNode(color: .white, size: outterNodeLayerHeight)
-        ]
-        
+        backNodeLayer.nodes = Array(repeating: LevelNode(color: .white, size: outterNodeLayerHeight), count: data.levelInfos.count)
         backNodeLayer.setNeedsDisplay()
-        
-        
-        let nodeLayerWidthDelta = (outterNodeLayerHeight - fontNodeLayerHeight) / 2.0
-        fontNodeLayer.frame = CGRect(x: nodeLayerWidthDelta, y: (self.bounds.height / 2.0) - (fontNodeLayerHeight / 2.0), width: self.bounds.width - nodeLayerWidthDelta * 2, height: fontNodeLayerHeight)
-        let progressColor = UIColor(hexString: "#68A4D4")
-        fontNodeLayer.nodes = [
-            LevelNode(color: progressColor, size: fontNodeLayerHeight),
-            LevelNode(color: progressColor, size: fontNodeLayerHeight),
-            LevelNode(color: progressColor, size: fontNodeLayerHeight),
-            LevelNode(color: progressColor, size: fontNodeLayerHeight),
-            LevelNode(color: progressColor, size: fontNodeLayerHeight),
-            LevelNode(color: .gray, size: fontNodeLayerHeight)
-        ]
-        fontNodeLayer.drawShadows = false
-        fontNodeLayer.setNeedsDisplay()
-        
-        
-        
+    }
+    
+    private func updateFrameTrackLayer() {
         let trackLayerX = outterNodeLayerHeight / 2.0
         let trackLayerFrame = CGRect(x: trackLayerX, y: (self.bounds.height / 2.0) - (trackLayerHeight / 2.0), width: self.bounds.width - 2 * trackLayerX, height: trackLayerHeight)
         trackLayer.frame = trackLayerFrame
+        trackLayer.progress = data.progress
+        trackLayer.progressColor = data.progressColor
+        
         trackLayer.setNeedsDisplay()
+    }
+    
+    private func updateFrameFrontNodeLayer() {
+        let nodeLayerWidthDelta = (outterNodeLayerHeight - fontNodeLayerHeight) / 2.0
+        fontNodeLayer.frame = CGRect(x: nodeLayerWidthDelta, y: (self.bounds.height / 2.0) - (fontNodeLayerHeight / 2.0), width: self.bounds.width - nodeLayerWidthDelta * 2, height: fontNodeLayerHeight)
         
-        highlightNode()
+        fontNodeLayer.nodes = []
         
-        updateFrameOfTopTextLayer()
-        updateFrameOfBottomTextLayer()
+        for i in data.levelInfos.indices {
+            let color = (i <= data.currentRankIndex) ? data.progressColor : UIColor(hexString: "#D9D9D9")
+            fontNodeLayer.nodes.append(LevelNode(color: color, size: fontNodeLayerHeight))
+        }
+        
+        fontNodeLayer.drawShadows = false
+        fontNodeLayer.setNeedsDisplay()
     }
     
     private func updateFrameOfTopTextLayer() {
         let layerHeight = 20.0
         let y: CGFloat = bounds.height / 2.0 - highlightRadius - layerHeight - 8.0
         topTextLayer.frame = CGRect(x: 0, y: y, width: bounds.width, height: layerHeight)
-        topTextLayer.texts = ["", "Bronze","Silver","Gold","Diamond","Platinum"]
-        //topTextLayer.texts = ["", "Đồng","Bạc","Vàng","Kim cương","Bạch kim"]
-        topTextLayer.colors = [
-            UIColor(hexString: "#9F5608"),
-            UIColor(hexString: "#9F5608"),
-            UIColor(hexString: "#8F939C"),
-            UIColor(hexString: "#C88F05"),
-            UIColor(hexString: "#536AAD"),
-            UIColor(hexString: "#1F6B92")
-        ]
-        //topTextLayer.borderColor = UIColor.blue.cgColor
-        //topTextLayer.borderWidth = 1
+        
+        topTextLayer.texts = data.levelInfos.map { $0.name }
+        topTextLayer.colors = data.levelInfos.map { $0.textColor }
         topTextLayer.setNeedsDisplay()
     }
     
     private func updateFrameOfBottomTextLayer() {
         let layerHeight = 20.0
-        let y: CGFloat = bounds.height / 2.0 + highlightRadius / 2.0
+        let y: CGFloat = bounds.height / 2.0 + highlightRadius / 2.0 + 4.0
         bottomTextLayer.frame = CGRect(x: 0, y: y, width: bounds.width, height: layerHeight)
         
-        bottomTextLayer.texts = ["0", "100","500","1000","3000","5000"]
-        bottomTextLayer.colors = [
-            UIColor(hexString: "#9F5608"),
-            UIColor(hexString: "#9F5608"),
-            UIColor(hexString: "#8F939C"),
-            UIColor(hexString: "#C88F05"),
-            UIColor(hexString: "#536AAD"),
-            UIColor(hexString: "#1F6B92")
-        ]
-        //topTextLayer.borderColor = UIColor.blue.cgColor
-        //topTextLayer.borderWidth = 1
+        bottomTextLayer.texts = data.levelInfos.map { "\($0.score)" }
+        bottomTextLayer.colors = data.levelInfos.map { $0.textColor }
         bottomTextLayer.setNeedsDisplay()
     }
     
     private func highlightNode() {
         let centerY = bounds.height / 2.0
         
-        let color = UIColor(hexString: "68A4D4")
+        let distanceBetweenNode = (bounds.width - outterNodeLayerHeight) / CGFloat(data.levelInfos.count - 1)
+        let x = Double(data.currentRankIndex) * distanceBetweenNode + highlightRadius / 2.0
+        
+        let color = data.progressColor
         
         hightlightLayer.shadowColor = color.cgColor
         
-        hightlightLayer.shadowPath = UIBezierPath(arcCenter: CGPoint(x: 12, y: centerY), radius: highlightRadius, startAngle: CGFloat(0), endAngle:CGFloat(Double.pi * 2), clockwise: true).cgPath
+        hightlightLayer.shadowPath = UIBezierPath(arcCenter: CGPoint(x: x, y: centerY), radius: highlightRadius, startAngle: CGFloat(0), endAngle:CGFloat(Double.pi * 2), clockwise: true).cgPath
         
         hightlightLayer.shadowOffset = CGSize(width: 0.5, height: 0.5)
         
         hightlightLayer.shadowOpacity = 0.4
         
         hightlightLayer.setNeedsDisplay()
+        
+        hightlightLayer.borderColor = UIColor.blue.cgColor
+        hightlightLayer.borderWidth = 1.0
     }
 }
